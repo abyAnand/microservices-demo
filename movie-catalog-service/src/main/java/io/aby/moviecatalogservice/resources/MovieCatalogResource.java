@@ -1,9 +1,13 @@
 package io.aby.moviecatalogservice.resources;
 
+import com.netflix.discovery.converters.Auto;
+import com.netflix.hystrix.contrib.javanica.annotation.HystrixCommand;
 import io.aby.moviecatalogservice.models.CatalogItem;
 import io.aby.moviecatalogservice.models.Movie;
 import io.aby.moviecatalogservice.models.Rating;
 import io.aby.moviecatalogservice.models.UserRating;
+import io.aby.moviecatalogservice.services.MovieInfo;
+import io.aby.moviecatalogservice.services.UserRatingInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -26,27 +30,30 @@ public class MovieCatalogResource {
     @Autowired
     private WebClient.Builder webClientBuilder;
 
+    @Autowired
+    MovieInfo movieInfo;
+
+    @Autowired
+    UserRatingInfo userRatingInfo;
+
     @RequestMapping("/{userId}")
     public List<CatalogItem> getCatalog(@PathVariable("userId") String userId){
 
-
-
-
         //get all rated movie IDs
-        UserRating ratings = restTemplate.getForObject("Http://ratings-data-service/ratingsdata/users/"+userId, UserRating.class);
+        UserRating ratings = userRatingInfo.getUserRating(userId);
 
-
-        return ratings.getUserRating().stream().map(rating-> {
-                    Movie movie = restTemplate.getForObject("Http://movie-info-service/movies/"+ rating.getMovieId(), Movie.class);
-
-
-                    return new CatalogItem(movie.getName(),"Test", rating.getRating());
-                })
+        return ratings.getUserRating().stream().map(rating->  movieInfo.getCatalogItem(rating))
                 .collect(Collectors.toList());
-        //for each movie ID, call movie info service and get details
+
+    }
 
 
-        //Put them all together
+}
+
+
+//for each movie ID, call movie info service and get details
+
+//Put them all together
 
          /*
                     Movie movie = webClientBuilder.build()
@@ -57,6 +64,3 @@ public class MovieCatalogResource {
                             .block();
 
                      */
-
-    }
-}
